@@ -138,11 +138,18 @@ Le Sidebar renforce également la personnalisation de votre espace via la gestio
         6.Animations :
 
 Les animations dans TaskFlow sont intégrées directement au cœur de l'interface utilisateur (via des widgets comme AnimatedContainer ou AnimatedOpacity) pour garantir une navigation fluide et interactive. Elles se manifestent lors du chargement dynamique des statistiques du Dashboard, de l'apparition des tâches dans la liste, ou lors des transitions de thèmes (clair/sombre), apportant une expérience visuelle moderne et réactive sans nécessiter de ressources externes. Ces effets, gérés nativement par le framework Flutter, permettent de fluidifier les interactions tout en maintenant les performances optimales de l'application.
+ 
+       7.Les étapes d'installation et d'exécution du projet
+Pour déployer et tester TaskFlow dans votre environnement local, veuillez suivre ces étapes :
+Prérequis : Assurez-vous de disposer du Flutter SDK, de Dart, ainsi que d'Android Studio avec un émulateur configuré (ex: Medium Phone: 5554).
+Installation : Clonez le dépôt, accédez au dossier du projet, puis installez les dépendances nécessaires avec la commande : flutter pub get.
+Exécution : Une fois l'émulateur lancé, exécutez la commande flutter run à la racine du projet pour démarrer l'application.
+Optimisation : Pour une fluidité maximale lors de votre présentation, vous pouvez utiliser flutter run --release.
 
-     7.Conclusion
+     8.Conclusion
 Ce projet a permis de concevoir une application de gestion de tâches performante, alliant une architecture MVC rigoureuse à une interface intuitive. Grâce à l'utilisation de SQLite pour la persistance locale et à l'intégration d'API REST, TaskFlow offre une solution robuste, fluide et sécurisée pour l'organisation quotidienne. Ce développement démontre une maîtrise concrète des cycles de vie des données et des bonnes pratiques de développement mobile.
 
-       8.Perspectives
+       9.Perspectives
 Pour enrichir davantage cette application, les évolutions suivantes sont envisagées :
 Synchronisation Cloud : Déploiement d'un backend pour permettre l'accès aux données sur plusieurs appareils.
 Notifications intelligentes : Mise en place de rappels automatiques pour mieux gérer les échéances.
