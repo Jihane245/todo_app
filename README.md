@@ -131,6 +131,10 @@ L'accès à ces informations est parfaitement intégré au Sidebar (Drawer), vé
 
 Le Sidebar renforce également la personnalisation de votre espace via la gestion de votre profil (  Ainsi l'ajout , la modification et la suppression d'une photo de profil ) 
 
+
+<img width="394" height="593" alt="WhatsApp Image 2026-06-11 at 22 42 51" src="https://github.com/user-attachments/assets/5ac43f47-3e0a-40f2-9f01-8fe414122566" />
+
+
         6.Animations :
 
 Les animations dans TaskFlow sont intégrées directement au cœur de l'interface utilisateur (via des widgets comme AnimatedContainer ou AnimatedOpacity) pour garantir une navigation fluide et interactive. Elles se manifestent lors du chargement dynamique des statistiques du Dashboard, de l'apparition des tâches dans la liste, ou lors des transitions de thèmes (clair/sombre), apportant une expérience visuelle moderne et réactive sans nécessiter de ressources externes. Ces effets, gérés nativement par le framework Flutter, permettent de fluidifier les interactions tout en maintenant les performances optimales de l'application.
