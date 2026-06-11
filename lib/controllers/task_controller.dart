@@ -25,6 +25,7 @@ class TaskController {
       task.progress,
       task.status,
       task.userId,
+      task.category, // Ajout du champ category
     );
   }
 
@@ -41,6 +42,7 @@ class TaskController {
       task.priority,
       task.progress,
       task.status,
+      task.category, // Ajout du champ category
     );
   }
 
@@ -67,6 +69,11 @@ class TaskController {
   Future<int> getPendingTasks(int userId) async {
     final tasks = await getTasks(userId);
     return tasks.where((task) => task.status == 0).length;
+  }
+
+  Future<int> getHighPriorityCount(int userId) async {
+    final tasks = await getTasks(userId);
+    return tasks.where((task) => task.priority == 3).length;
   }
 
   Future<double> getProductivity(int userId) async {

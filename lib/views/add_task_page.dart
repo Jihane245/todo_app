@@ -2,6 +2,16 @@ import 'package:flutter/material.dart';
 import '../controllers/task_controller.dart';
 import '../models/task.dart';
 
+// Liste des catégories disponibles
+const List<String> kCategories = [
+  'Général',
+  'Travail',
+  'Personnel',
+  'Études',
+  'Santé',
+  'Projets',
+];
+
 class AddTaskPage extends StatefulWidget {
   final int userId;
 
@@ -20,6 +30,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
   DateTime? startDate;
   DateTime? endDate;
   int priority = 1;
+  String selectedCategory = 'Général';
 
   Future<void> pickDate({required bool isStart}) async {
     DateTime? picked = await showDatePicker(
@@ -43,8 +54,15 @@ class _AddTaskPageState extends State<AddTaskPage> {
 
     if (picked != null) {
       setState(() {
-        if (isStart) startDate = picked;
-        else endDate = picked;
+        if (isStart) {
+          startDate = picked;
+          // Si la date de fin est avant la nouvelle date de début, on la réinitialise
+          if (endDate != null && endDate!.isBefore(picked)) {
+            endDate = null;
+          }
+        } else {
+          endDate = picked;
+        }
       });
     }
   }
@@ -57,22 +75,23 @@ class _AddTaskPageState extends State<AddTaskPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black87,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         centerTitle: true,
+        title: const Text("Nouvelle Tâche", style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
           child: Form(
             key: formKey,
-            child: TweenAnimationBuilder(
-              tween: Tween<double>(begin: 0, end: 1),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 600),
-              builder: (context, double val, child) {
+              builder: (context, val, child) {
                 return Opacity(
                   opacity: val,
                   child: Transform.translate(
@@ -84,20 +103,21 @@ class _AddTaskPageState extends State<AddTaskPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Nouvelle Tâche", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2D3142))),
-                  const SizedBox(height: 5),
                   const Text("Planifiez vos objectifs 🚀", style: TextStyle(color: Colors.grey, fontSize: 16)),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
 
                   Container(
                     padding: const EdgeInsets.all(25),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(30),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
+                      ],
                     ),
                     child: Column(
                       children: [
+                        // Titre
                         _buildTextField(
                           controller: titleController,
                           label: "Titre de la tâche",
@@ -105,6 +125,8 @@ class _AddTaskPageState extends State<AddTaskPage> {
                           validatorMessage: "Le titre est requis",
                         ),
                         const SizedBox(height: 20),
+
+                        // Description
                         _buildTextField(
                           controller: descriptionController,
                           label: "Description détaillée",
@@ -114,6 +136,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
                         ),
                         const SizedBox(height: 25),
 
+                        // Dates
                         Row(
                           children: [
                             Expanded(child: _buildDateButton("Début", startDate, true)),
@@ -122,10 +145,16 @@ class _AddTaskPageState extends State<AddTaskPage> {
                           ],
                         ),
                         const SizedBox(height: 25),
+
+                        // Priorité
                         _buildPriorityDropdown(),
+                        const SizedBox(height: 20),
+
+                        // Catégorie
+                        _buildCategoryDropdown(),
                         const SizedBox(height: 35),
 
-                        // Bouton d'ajout corrigé
+                        // Bouton d'ajout
                         _buildSubmitButton(),
                       ],
                     ),
@@ -139,16 +168,22 @@ class _AddTaskPageState extends State<AddTaskPage> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String label, required IconData icon, int maxLines = 1, required String validatorMessage}) {
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+    required String validatorMessage,
+  }) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
-      validator: (value) => (value == null || value.isEmpty) ? validatorMessage : null,
+      validator: (value) => (value == null || value.trim().isEmpty) ? validatorMessage : null,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: const Color(0xFF6C63FF)),
         filled: true,
-        fillColor: const Color(0xFFF8F9FA),
+        fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
       ),
     );
@@ -160,7 +195,10 @@ class _AddTaskPageState extends State<AddTaskPage> {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
-        decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           children: [
             Icon(isStart ? Icons.calendar_today : Icons.event_available, color: const Color(0xFF6C63FF)),
@@ -181,7 +219,7 @@ class _AddTaskPageState extends State<AddTaskPage> {
         labelText: "Priorité",
         prefixIcon: const Icon(Icons.flag_rounded, color: Color(0xFF6C63FF)),
         filled: true,
-        fillColor: const Color(0xFFF8F9FA),
+        fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
       ),
       items: const [
@@ -193,6 +231,23 @@ class _AddTaskPageState extends State<AddTaskPage> {
     );
   }
 
+  Widget _buildCategoryDropdown() {
+    return DropdownButtonFormField<String>(
+      value: selectedCategory,
+      decoration: InputDecoration(
+        labelText: "Catégorie",
+        prefixIcon: const Icon(Icons.label_rounded, color: Color(0xFF6C63FF)),
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+      ),
+      items: kCategories
+          .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+          .toList(),
+      onChanged: (value) => setState(() => selectedCategory = value!),
+    );
+  }
+
   Widget _buildSubmitButton() {
     return SizedBox(
       width: double.infinity,
@@ -201,7 +256,9 @@ class _AddTaskPageState extends State<AddTaskPage> {
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF9D94FF)]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))],
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5)),
+          ],
         ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -211,27 +268,32 @@ class _AddTaskPageState extends State<AddTaskPage> {
           ),
           onPressed: () async {
             if (!formKey.currentState!.validate()) return;
-            
+
+            // Validation : date de fin >= date de début
+            if (startDate != null && endDate != null && endDate!.isBefore(startDate!)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("La date de fin doit être égale ou postérieure à la date de début")),
+              );
+              return;
+            }
+
             try {
               await controller.addTask(
                 Task(
-                  title: titleController.text,
-                  description: descriptionController.text,
-                  startDate: startDate?.toString(),
-                  endDate: endDate?.toString(),
+                  title: titleController.text.trim(),
+                  description: descriptionController.text.trim(),
+                  startDate: startDate?.toIso8601String(),
+                  endDate: endDate?.toIso8601String(),
                   priority: priority,
                   progress: 0,
                   status: 0,
                   userId: widget.userId,
+                  category: selectedCategory,
                 ),
               );
-              
-              // Redirection forcée après le succès
-              if (mounted) {
-                Navigator.of(context).pop(true);
-              }
+
+              if (mounted) Navigator.of(context).pop(true);
             } catch (e) {
-              // En cas d'erreur avec la DB, on peut l'afficher dans la console
               debugPrint("Erreur lors de l'ajout : $e");
             }
           },

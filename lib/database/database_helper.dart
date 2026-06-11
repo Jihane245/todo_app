@@ -17,27 +17,35 @@ class DatabaseHelper {
 
     Database mydb = await openDatabase(
       path,
-      // 1. ON PASSE À LA VERSION 2
-      version: 2, 
+      version: 3, // Version 3 : ajout de la colonne category
       onCreate: _onCreate,
-      // 2. ON AJOUTE LA FONCTION DE MISE À JOUR
-      onUpgrade: _onUpgrade, 
+      onUpgrade: _onUpgrade,
     );
 
     return mydb;
   }
 
   // ==========================================
-  // NOUVELLE FONCTION POUR METTRE À JOUR LA DB
+  // MIGRATION : mise à jour de la structure DB
   // ==========================================
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     if (oldVersion < 2) {
-      // On ajoute les colonnes manquantes sans détruire la table
+      // Migration v1 → v2 : ajout des dates
       await db.execute("ALTER TABLE tasks ADD COLUMN start_date TEXT");
       await db.execute("ALTER TABLE tasks ADD COLUMN end_date TEXT");
     }
+    if (oldVersion < 3) {
+      // Migration v2 → v3 : ajout de la catégorie
+      // DEFAULT 'Général' pour que les tâches existantes aient une catégorie
+      await db.execute(
+        "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'Général'",
+      );
+    }
   }
 
+  // ==========================================
+  // CRÉATION INITIALE DES TABLES
+  // ==========================================
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE users(
@@ -59,18 +67,22 @@ class DatabaseHelper {
         priority INTEGER DEFAULT 1,
         progress INTEGER DEFAULT 0,
         status INTEGER DEFAULT 0,
+        category TEXT DEFAULT 'Général',
         user_id INTEGER NOT NULL,
         FOREIGN KEY(user_id) REFERENCES users(id)
       )
     ''');
   }
+
+  // ==========================================
+  // UTILISATEURS
+  // ==========================================
   Future<int> insertUser(
     String name,
     String email,
     String password,
     String secretCode,
   ) async {
-
     return await (await db).insert(
       'users',
       {
@@ -81,54 +93,95 @@ class DatabaseHelper {
       },
     );
   }
-Future<int> insertTask(
-  String title,
-  String description,
-  String? startDate,
-  String? endDate,
-  int priority,
-  int progress,
-  int status,
-  int userId,
-) async {
-
-  return await (await db).insert(
-    'tasks',
-    {
-      'title': title,
-      'description': description,
-
-      'start_date': startDate,
-      'end_date': endDate,
-
-      'priority': priority,
-
-      'progress': progress,
-
-      'status': status,
-
-      'user_id': userId,
-    },
-  );
-}
-  Future<List<Map<String, dynamic>>> getAllTasks() async {
-
-    return await (await db).query(
-      'tasks',
-    );
-  }
 
   Future<List<Map<String, dynamic>>> getAllUsers() async {
+    return await (await db).query('users');
+  }
 
+  Future<List<Map<String, dynamic>>> getUserByEmail(String email) async {
     return await (await db).query(
       'users',
+      where: 'email = ?',
+      whereArgs: [email],
     );
   }
 
-  Future<List<Map<String, dynamic>>> getTasksByUser(
-    int userId,
-  ) async {
+  // Récupère un utilisateur par son ID — utilisé par AuthController (MVC)
+  Future<Map<String, dynamic>?> getUserById(int id) async {
+    final result = await (await db).query(
+      'users',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
 
+  Future<List<Map<String, dynamic>>> loginUser(
+    String email,
+    String password,
+  ) async {
+    return await (await db).query(
+      'users',
+      where: 'email = ? AND password = ?',
+      whereArgs: [email, password],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> verifySecretCode(
+    String email,
+    String secretCode,
+  ) async {
+    return await (await db).query(
+      'users',
+      where: 'email = ? AND secret_code = ?',
+      whereArgs: [email, secretCode],
+    );
+  }
+
+  Future<int> updatePassword(String email, String password) async {
+    return await (await db).update(
+      'users',
+      {'password': password},
+      where: 'email = ?',
+      whereArgs: [email],
+    );
+  }
+
+  // ==========================================
+  // TÂCHES
+  // ==========================================
+  Future<int> insertTask(
+    String title,
+    String description,
+    String? startDate,
+    String? endDate,
+    int priority,
+    int progress,
+    int status,
+    int userId,
+    String category,
+  ) async {
+    return await (await db).insert(
+      'tasks',
+      {
+        'title': title,
+        'description': description,
+        'start_date': startDate,
+        'end_date': endDate,
+        'priority': priority,
+        'progress': progress,
+        'status': status,
+        'user_id': userId,
+        'category': category,
+      },
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllTasks() async {
+    return await (await db).query('tasks');
+  }
+
+  Future<List<Map<String, dynamic>>> getTasksByUser(int userId) async {
     return await (await db).query(
       'tasks',
       where: 'user_id = ?',
@@ -137,108 +190,38 @@ Future<int> insertTask(
   }
 
   Future<int> updateTask(
-  int id,
-  String title,
-  String description,
-
-  String? startDate,
-  String? endDate,
-
-  int priority,
-
-  int progress,
-
-  int status,
-) async {
-
-  return await (await db).update(
-    'tasks',
-    {
-      'title': title,
-
-      'description': description,
-
-      'start_date': startDate,
-
-      'end_date': endDate,
-
-      'priority': priority,
-
-      'progress': progress,
-
-      'status': status,
-    },
-
-    where: 'id = ?',
-
-    whereArgs: [id],
-  );
-}
-
-  Future<int> deleteTask(
     int id,
+    String title,
+    String description,
+    String? startDate,
+    String? endDate,
+    int priority,
+    int progress,
+    int status,
+    String category,
   ) async {
-
-    return await (await db).delete(
+    return await (await db).update(
       'tasks',
+      {
+        'title': title,
+        'description': description,
+        'start_date': startDate,
+        'end_date': endDate,
+        'priority': priority,
+        'progress': progress,
+        'status': status,
+        'category': category,
+      },
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  Future<List<Map<String, dynamic>>> getUserByEmail(
-    String email,
-  ) async {
-
-    return await (await db).query(
-      'users',
-      where: 'email = ?',
-      whereArgs: [email],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> loginUser(
-    String email,
-    String password,
-  ) async {
-
-    return await (await db).query(
-      'users',
-      where: 'email = ? AND password = ?',
-      whereArgs: [
-        email,
-        password,
-      ],
-    );
-  }
-
-  Future<List<Map<String, dynamic>>> verifySecretCode(
-    String email,
-    String secretCode,
-  ) async {
-
-    return await (await db).query(
-      'users',
-      where: 'email = ? AND secret_code = ?',
-      whereArgs: [
-        email,
-        secretCode,
-      ],
-    );
-  }
-
-  Future<int> updatePassword(
-    String email,
-    String password,
-  ) async {
-
-    return await (await db).update(
-      'users',
-      {
-        'password': password,
-      },
-      where: 'email = ?',
-      whereArgs: [email],
+  Future<int> deleteTask(int id) async {
+    return await (await db).delete(
+      'tasks',
+      where: 'id = ?',
+      whereArgs: [id],
     );
   }
 }

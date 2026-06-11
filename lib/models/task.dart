@@ -8,6 +8,7 @@ class Task {
   int progress;
   int status;
   int userId;
+  String category; // Catégorie de la tâche (Général, Travail, Études, etc.)
 
   // Constructeur principal
   Task({
@@ -20,9 +21,10 @@ class Task {
     required this.progress,
     required this.status,
     required this.userId,
+    this.category = 'Général', // Valeur par défaut
   });
 
-  // Fonction pour convertir les données de la base de données (Map) en objet Task
+  // Convertit les données de la base de données (Map) en objet Task
   factory Task.fromMap(Map<String, dynamic> map) {
     return Task(
       id: map['id'],
@@ -34,10 +36,11 @@ class Task {
       progress: map['progress'] ?? 0,
       status: map['status'] ?? 0,
       userId: map['user_id'],
+      category: map['category'] ?? 'Général', // Compatibilité avec anciennes données
     );
   }
 
-  // Fonction pour convertir l'objet Task en Map pour la base de données
+  // Convertit l'objet Task en Map pour la base de données
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -49,6 +52,7 @@ class Task {
       'progress': progress,
       'status': status,
       'user_id': userId,
+      'category': category,
     };
   }
 }

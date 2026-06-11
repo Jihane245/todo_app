@@ -67,4 +67,11 @@ class AuthController {
 
     return true;
   }
+
+  // Récupère un utilisateur par son ID — utilisé dans HomePage
+  // pour afficher le nom de l'utilisateur connecté (conformité MVC)
+  Future<String> getUserName(int id) async {
+    final user = await db.getUserById(id);
+    return user != null ? user['name'] as String : 'Utilisateur';
+  }
 }

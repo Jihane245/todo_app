@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../controllers/task_controller.dart';
 import '../models/task.dart';
+import 'add_task_page.dart'; // Importe kCategories
 
 class EditTaskPage extends StatefulWidget {
   final Task task;
@@ -21,6 +22,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
   DateTime? endDate;
   int priority = 1;
   double progress = 0;
+  String selectedCategory = 'Général';
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
     if (widget.task.endDate != null) endDate = DateTime.tryParse(widget.task.endDate!);
     priority = widget.task.priority;
     progress = widget.task.progress.toDouble();
+    selectedCategory = widget.task.category;
   }
 
   Future<void> pickDate({required bool isStart}) async {
@@ -52,8 +55,15 @@ class _EditTaskPageState extends State<EditTaskPage> {
 
     if (picked != null) {
       setState(() {
-        if (isStart) startDate = picked;
-        else endDate = picked;
+        if (isStart) {
+          startDate = picked;
+          // Réinitialise endDate si elle devient antérieure à startDate
+          if (endDate != null && endDate!.isBefore(picked)) {
+            endDate = null;
+          }
+        } else {
+          endDate = picked;
+        }
       });
     }
   }
@@ -66,22 +76,23 @@ class _EditTaskPageState extends State<EditTaskPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black87,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
         centerTitle: true,
+        title: const Text("Modifier la Tâche", style: TextStyle(fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
           child: Form(
             key: formKey,
-            child: TweenAnimationBuilder(
-              tween: Tween<double>(begin: 0, end: 1),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
               duration: const Duration(milliseconds: 500),
-              builder: (context, double val, child) {
+              builder: (context, val, child) {
                 return Opacity(
                   opacity: val,
                   child: Transform.scale(scale: 0.95 + (0.05 * val), child: child),
@@ -90,46 +101,50 @@ class _EditTaskPageState extends State<EditTaskPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text("Modifier Tâche", style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2D3142))),
-                  const SizedBox(height: 5),
                   const Text("Mettez à jour vos avancées ✨", style: TextStyle(color: Colors.grey, fontSize: 16)),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 25),
 
                   Container(
                     padding: const EdgeInsets.all(25),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).cardColor,
                       borderRadius: BorderRadius.circular(30),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10))],
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20, offset: const Offset(0, 10)),
+                      ],
                     ),
                     child: Column(
                       children: [
+                        // Titre
                         TextFormField(
                           controller: titleController,
-                          validator: (v) => (v == null || v.isEmpty) ? "Titre requis" : null,
+                          validator: (v) => (v == null || v.trim().isEmpty) ? "Titre requis" : null,
                           decoration: InputDecoration(
                             labelText: "Titre",
                             prefixIcon: const Icon(Icons.title, color: Color(0xFF6C63FF)),
                             filled: true,
-                            fillColor: const Color(0xFFF8F9FA),
+                            fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                           ),
                         ),
                         const SizedBox(height: 20),
+
+                        // Description
                         TextFormField(
                           controller: descriptionController,
                           maxLines: 3,
-                          validator: (v) => (v == null || v.isEmpty) ? "Description requise" : null,
+                          validator: (v) => (v == null || v.trim().isEmpty) ? "Description requise" : null,
                           decoration: InputDecoration(
                             labelText: "Description",
                             prefixIcon: const Icon(Icons.description, color: Color(0xFF6C63FF)),
                             filled: true,
-                            fillColor: const Color(0xFFF8F9FA),
+                            fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                           ),
                         ),
                         const SizedBox(height: 25),
 
+                        // Dates
                         Row(
                           children: [
                             Expanded(child: _buildDateButton("Début", startDate, true)),
@@ -139,13 +154,14 @@ class _EditTaskPageState extends State<EditTaskPage> {
                         ),
                         const SizedBox(height: 25),
 
+                        // Priorité
                         DropdownButtonFormField<int>(
                           value: priority,
                           decoration: InputDecoration(
                             labelText: "Priorité",
                             prefixIcon: const Icon(Icons.flag, color: Color(0xFF6C63FF)),
                             filled: true,
-                            fillColor: const Color(0xFFF8F9FA),
+                            fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
                           ),
                           items: const [
@@ -155,11 +171,32 @@ class _EditTaskPageState extends State<EditTaskPage> {
                           ],
                           onChanged: (value) => setState(() => priority = value!),
                         ),
+                        const SizedBox(height: 20),
+
+                        // Catégorie
+                        DropdownButtonFormField<String>(
+                          value: kCategories.contains(selectedCategory) ? selectedCategory : 'Général',
+                          decoration: InputDecoration(
+                            labelText: "Catégorie",
+                            prefixIcon: const Icon(Icons.label_rounded, color: Color(0xFF6C63FF)),
+                            filled: true,
+                            fillColor: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(20), borderSide: BorderSide.none),
+                          ),
+                          items: kCategories
+                              .map((cat) => DropdownMenuItem(value: cat, child: Text(cat)))
+                              .toList(),
+                          onChanged: (value) => setState(() => selectedCategory = value!),
+                        ),
                         const SizedBox(height: 30),
 
+                        // Progression
                         Align(
                           alignment: Alignment.centerLeft,
-                          child: Text("Progression : ${progress.toInt()}%", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3142))),
+                          child: Text(
+                            "Progression : ${progress.toInt()}%",
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF2D3142)),
+                          ),
                         ),
                         Slider(
                           value: progress,
@@ -173,7 +210,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                         ),
                         const SizedBox(height: 30),
 
-                        // Bouton de mise à jour corrigé
+                        // Bouton Sauvegarder
                         _buildUpdateButton(),
                       ],
                     ),
@@ -193,7 +230,10 @@ class _EditTaskPageState extends State<EditTaskPage> {
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 15),
-        decoration: BoxDecoration(color: const Color(0xFFF8F9FA), borderRadius: BorderRadius.circular(20)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
         child: Column(
           children: [
             Icon(isStart ? Icons.calendar_today : Icons.event_available, color: const Color(0xFF6C63FF)),
@@ -214,7 +254,9 @@ class _EditTaskPageState extends State<EditTaskPage> {
         decoration: BoxDecoration(
           gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF9D94FF)]),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5))],
+          boxShadow: [
+            BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.4), blurRadius: 15, offset: const Offset(0, 5)),
+          ],
         ),
         child: ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -225,23 +267,29 @@ class _EditTaskPageState extends State<EditTaskPage> {
           onPressed: () async {
             if (!formKey.currentState!.validate()) return;
 
+            // Validation : date de fin >= date de début
+            if (startDate != null && endDate != null && endDate!.isBefore(startDate!)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("La date de fin doit être égale ou postérieure à la date de début")),
+              );
+              return;
+            }
+
             try {
-              widget.task.title = titleController.text;
-              widget.task.description = descriptionController.text;
-              widget.task.startDate = startDate?.toString();
-              widget.task.endDate = endDate?.toString();
+              widget.task.title = titleController.text.trim();
+              widget.task.description = descriptionController.text.trim();
+              widget.task.startDate = startDate?.toIso8601String();
+              widget.task.endDate = endDate?.toIso8601String();
               widget.task.priority = priority;
               widget.task.progress = progress.toInt();
+              widget.task.category = selectedCategory;
 
-              // Logique de complétion automatique
+              // Complétion automatique si progression = 100%
               widget.task.status = (widget.task.progress == 100) ? 1 : 0;
 
               await controller.updateTask(widget.task);
-              
-              // Redirection forcée après la mise à jour
-              if (mounted) {
-                Navigator.of(context).pop(true);
-              }
+
+              if (mounted) Navigator.of(context).pop(true);
             } catch (e) {
               debugPrint("Erreur lors de la modification : $e");
             }
