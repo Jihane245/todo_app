@@ -17,7 +17,7 @@ class DatabaseHelper {
 
     Database mydb = await openDatabase(
       path,
-      version: 3, // Version 3 : ajout de la colonne category
+      version: 4, // Version 4 : ajout de la colonne profile_image_path
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -36,9 +36,15 @@ class DatabaseHelper {
     }
     if (oldVersion < 3) {
       // Migration v2 → v3 : ajout de la catégorie
-      // DEFAULT 'Général' pour que les tâches existantes aient une catégorie
       await db.execute(
         "ALTER TABLE tasks ADD COLUMN category TEXT DEFAULT 'Général'",
+      );
+    }
+    if (oldVersion < 4) {
+      // Migration v3 → v4 : ajout du chemin de la photo de profil
+      // NULL = pas de photo → avatar par défaut affiché dans l'UI
+      await db.execute(
+        "ALTER TABLE users ADD COLUMN profile_image_path TEXT",
       );
     }
   }
@@ -53,7 +59,8 @@ class DatabaseHelper {
         name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        secret_code TEXT NOT NULL
+        secret_code TEXT NOT NULL,
+        profile_image_path TEXT
       )
     ''');
 
@@ -144,6 +151,16 @@ class DatabaseHelper {
       {'password': password},
       where: 'email = ?',
       whereArgs: [email],
+    );
+  }
+
+  // Stocke uniquement le chemin local de l'image (pas de BLOB)
+  Future<int> updateProfileImagePath(int userId, String? imagePath) async {
+    return await (await db).update(
+      'users',
+      {'profile_image_path': imagePath},
+      where: 'id = ?',
+      whereArgs: [userId],
     );
   }
 

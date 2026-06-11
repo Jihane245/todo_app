@@ -74,4 +74,30 @@ class AuthController {
     final user = await db.getUserById(id);
     return user != null ? user['name'] as String : 'Utilisateur';
   }
+
+  // Récupère l'objet complet de l'utilisateur (pour la photo de profil, etc.)
+  Future<Map<String, dynamic>?> getUserById(int id) async {
+    return await db.getUserById(id);
+  }
+
+  // Enregistre le chemin local de la photo de profil dans SQLite
+  // imagePath = chemin absolu de l'image sur l'appareil
+  Future<bool> updateProfileImage(int userId, String imagePath) async {
+    try {
+      await db.updateProfileImagePath(userId, imagePath);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Supprime la photo de profil (remet NULL dans SQLite → avatar par défaut)
+  Future<bool> deleteProfileImage(int userId) async {
+    try {
+      await db.updateProfileImagePath(userId, null);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 }

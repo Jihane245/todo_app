@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../controllers/task_controller.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/quote_controller.dart';
@@ -33,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   String userName = "Utilisateur";
   String quoteText = "";
   String quoteAuthor = "";
+  String? profileImagePath; // Chemin local de la photo de profil (null = avatar par défaut)
 
   // ==============================
   // STATISTIQUES (calculées depuis la liste en mémoire — aucune requête DB supplémentaire)
@@ -55,8 +58,10 @@ class _HomePageState extends State<HomePage> {
   Future<void> loadAll() async {
     setState(() => isLoading = true);
 
-    // 1. Nom de l'utilisateur via AuthController
-    userName = await authController.getUserName(widget.userId);
+    // 1. Données utilisateur via AuthController (nom + photo)
+    final user = await authController.getUserById(widget.userId);
+    userName = user != null ? (user['name'] as String? ?? 'Utilisateur') : 'Utilisateur';
+    profileImagePath = user != null ? user['profile_image_path'] as String? : null;
 
     // 2. Tâches via TaskController
     tasks = await controller.getTasks(widget.userId);
@@ -67,6 +72,67 @@ class _HomePageState extends State<HomePage> {
     quoteAuthor = q['author']!;
 
     setState(() => isLoading = false);
+  }
+
+  // ==============================
+  // PHOTO DE PROFIL — Sélection depuis la galerie
+  // ==============================
+  Future<void> _pickProfileImage() async {
+    final picker = ImagePicker();
+    final XFile? picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 600,
+      maxHeight: 600,
+      imageQuality: 85,
+    );
+
+    // L'utilisateur a annulé — on ne fait rien
+    if (picked == null) return;
+
+    final success = await authController.updateProfileImage(widget.userId, picked.path);
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() => profileImagePath = picked.path);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Photo de profil mise à jour ✅"),
+          backgroundColor: Color(0xFF6C63FF),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erreur lors de la mise à jour de la photo")),
+      );
+    }
+  }
+
+  Future<void> _deleteProfileImage() async {
+    final success = await authController.deleteProfileImage(widget.userId);
+
+    if (!mounted) return;
+
+    if (success) {
+      setState(() => profileImagePath = null);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Photo de profil supprimée")),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erreur lors de la suppression de la photo")),
+      );
+    }
+  }
+
+  // Retourne vrai si le fichier image existe vraiment sur l'appareil
+  bool _profileImageExists() {
+    if (profileImagePath == null) return false;
+    try {
+      return File(profileImagePath!).existsSync();
+    } catch (_) {
+      return false; // Ne bloque jamais l'app
+    }
   }
 
   // ==============================
@@ -208,10 +274,36 @@ class _HomePageState extends State<HomePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const CircleAvatar(
-                  radius: 32,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 36, color: Color(0xFF6C63FF)),
+                // ---- Avatar : image réelle ou icône par défaut ----
+                GestureDetector(
+                  onTap: _pickProfileImage, // Tap sur l'avatar pour changer la photo
+                  child: Stack(
+                    children: [
+                      CircleAvatar(
+                        radius: 34,
+                        backgroundColor: Colors.white,
+                        backgroundImage: _profileImageExists()
+                            ? FileImage(File(profileImagePath!))
+                            : null,
+                        child: _profileImageExists()
+                            ? null
+                            : const Icon(Icons.person, size: 38, color: Color(0xFF6C63FF)),
+                      ),
+                      // Badge caméra pour indiquer que c'est cliquable
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.photo_library_rounded, size: 14, color: Color(0xFF6C63FF)),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -225,6 +317,29 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
+
+          // Modifier la photo
+          ListTile(
+            dense: true,
+            leading: const Icon(Icons.photo_library_outlined, color: Color(0xFF6C63FF), size: 22),
+            title: const Text("Modifier la photo", style: TextStyle(fontSize: 14)),
+            onTap: () async {
+              Navigator.pop(context); // Ferme le drawer
+              await _pickProfileImage();
+            },
+          ),
+
+          // Supprimer la photo (visible seulement si une photo existe)
+          if (_profileImageExists())
+            ListTile(
+              dense: true,
+              leading: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+              title: const Text("Supprimer la photo", style: TextStyle(fontSize: 14, color: Colors.redAccent)),
+              onTap: () async {
+                Navigator.pop(context);
+                await _deleteProfileImage();
+              },
+            ),
 
           // Accueil
           ListTile(

@@ -85,6 +85,15 @@ Toutes les données sont stockées **localement sur l'appareil** grâce à SQLit
 - L'échec de l'API ne bloque jamais l'application
 - CRUD SQLite non modifié
 
+### 6. 🖼️ Photo de profil locale
+- L'utilisateur peut choisir une photo depuis la **galerie** de l'appareil
+- La photo s'affiche comme **CircleAvatar** dans le menu latéral (Drawer)
+- Si aucune photo n'est définie (ou si le fichier est introuvable), un **avatar par défaut** est affiché automatiquement
+- **Modifier** : tap sur l'avatar ou via le bouton "Modifier la photo" dans le Drawer
+- **Supprimer** : bouton visible dans le Drawer uniquement si une photo est définie
+- Seul le **chemin local** du fichier est stocké dans SQLite (pas de BLOB, pas d'upload serveur)
+- Gestion des erreurs : annulation par l'utilisateur, fichier déplacé/supprimé → pas de crash
+
 ---
 
 ## 🏗️ Architecture MVC adoptée
