@@ -3,10 +3,12 @@ import '../controllers/task_controller.dart';
 import '../models/task.dart';
 import 'add_task_page.dart';
 import 'edit_task_page.dart';
+import 'dashboard_page.dart';
+import 'login_page.dart';
+import '../main.dart';
 
 class HomePage extends StatefulWidget {
   final int userId;
-
   const HomePage({super.key, required this.userId});
 
   @override
@@ -17,7 +19,7 @@ class _HomePageState extends State<HomePage> {
   TaskController controller = TaskController();
   List<Task> tasks = [];
   bool isLoading = true;
-  String userName = "Utilisateur"; // Nom par défaut
+  String userName = "Utilisateur";
 
   @override
   void initState() {
@@ -25,25 +27,19 @@ class _HomePageState extends State<HomePage> {
     loadUserDataAndTasks();
   }
 
-  // Charge le nom de l'utilisateur ET ses tâches
   Future<void> loadUserDataAndTasks() async {
     setState(() => isLoading = true);
-    
-    // 1. Récupérer le nom de l'utilisateur
     try {
       final users = await controller.db.getAllUsers();
       final user = users.firstWhere(
-        (u) => u['id'] == widget.userId, 
-        orElse: () => {'name': 'Utilisateur'}
+        (u) => u['id'] == widget.userId,
+        orElse: () => {'name': 'Utilisateur'},
       );
       userName = user['name'];
     } catch (e) {
       userName = "Utilisateur";
     }
-
-    // 2. Récupérer les tâches
     tasks = await controller.getTasks(widget.userId);
-    
     setState(() => isLoading = false);
   }
 
@@ -59,11 +55,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF0F4F8),
-      
-      // ====================
-      // MENU LATÉRAL (DRAWER)
-      // ====================
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -72,72 +63,66 @@ class _HomePageState extends State<HomePage> {
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF6C63FF), Color(0xFF9D94FF)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
                 ),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.person, size: 35, color: Color(0xFF6C63FF)),
-                  ),
+                  const CircleAvatar(radius: 30, backgroundColor: Colors.white, child: Icon(Icons.person, size: 35, color: Color(0xFF6C63FF))),
                   const SizedBox(height: 15),
-                  // Affichage dynamique du nom de l'utilisateur
-                  Text(
-                    userName,
-                    style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
+                  Text(userName, style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
             ListTile(
-              leading: const Icon(Icons.home, color: Color(0xFF6C63FF)),
-              title: const Text("Tâches", style: TextStyle(fontWeight: FontWeight.w600)),
+              leading: const Icon(Icons.home),
+              title: const Text("Tâches"),
               onTap: () => Navigator.pop(context),
+            ),
+            ListTile(
+              leading: const Icon(Icons.dashboard),
+              title: const Text("Dashboard"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(context, MaterialPageRoute(builder: (_) => DashboardPage(userId: widget.userId)));
+              },
+            ),
+            const Divider(),
+            SwitchListTile(
+              secondary: Icon(themeNotifier.value == ThemeMode.light ? Icons.light_mode : Icons.dark_mode),
+              title: const Text("Mode Sombre"),
+              value: themeNotifier.value == ThemeMode.dark,
+              onChanged: (bool value) {
+                setState(() {
+                  themeNotifier.value = value ? ThemeMode.dark : ThemeMode.light;
+                });
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.redAccent),
+              title: const Text("Déconnexion", style: TextStyle(color: Colors.redAccent)),
+              onTap: () {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginPage()),
+                  (route) => false,
+                );
+              },
             ),
           ],
         ),
       ),
-
-      appBar: AppBar(
-        title: const Text("Mes Tâches", style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.transparent,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF6C63FF), Color(0xFF9D94FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        elevation: 0,
-        centerTitle: true,
-      ),
-
+      appBar: AppBar(title: const Text("Mes Tâches", style: TextStyle(fontWeight: FontWeight.bold)), centerTitle: true),
       floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: const Color(0xFF6C63FF),
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text("Nouvelle", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        elevation: 8,
+        icon: const Icon(Icons.add),
+        label: const Text("Nouvelle"),
         onPressed: () async {
-          bool? result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AddTaskPage(userId: widget.userId)),
-          );
+          bool? result = await Navigator.push(context, MaterialPageRoute(builder: (_) => AddTaskPage(userId: widget.userId)));
           if (result == true) loadUserDataAndTasks();
         },
       ),
-
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
-          : tasks.isEmpty
-              ? _buildEmptyState()
-              : _buildTaskList(),
+      body: isLoading ? const Center(child: CircularProgressIndicator()) : (tasks.isEmpty ? _buildEmptyState() : _buildTaskList()),
     );
   }
 
@@ -148,10 +133,7 @@ class _HomePageState extends State<HomePage> {
         children: [
           Icon(Icons.task_alt, size: 100, color: Colors.grey.withOpacity(0.3)),
           const SizedBox(height: 20),
-          const Text(
-            "Aucune tâche pour le moment ✨",
-            style: TextStyle(fontSize: 18, color: Colors.grey, fontWeight: FontWeight.w500),
-          ),
+          const Text("Aucune tâche pour le moment ✨", style: TextStyle(fontSize: 18, color: Colors.grey)),
         ],
       ),
     );
@@ -162,108 +144,40 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.only(top: 15, bottom: 80),
       itemCount: tasks.length,
       itemBuilder: (context, index) {
-        Task task = tasks[index];
-
-        return TweenAnimationBuilder(
-          tween: Tween<double>(begin: 0, end: 1),
-          duration: Duration(milliseconds: 300 + (index * 100)),
-          builder: (context, double opacity, child) {
-            return Opacity(
-              opacity: opacity,
-              child: Transform.translate(
-                offset: Offset(0, 30 * (1 - opacity)),
-                child: child,
-              ),
-            );
-          },
-          child: _buildTaskCard(task),
-        );
+        return _buildTaskCard(tasks[index]);
       },
     );
   }
 
   Widget _buildTaskCard(Task task) {
     bool isDone = task.status == 1;
-
-    return Container(
+    return Card(
       margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6C63FF).withOpacity(0.1),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Row(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: ListTile(
+        leading: Checkbox(
+          activeColor: const Color(0xFF6C63FF),
+          value: isDone,
+          onChanged: (v) async {
+            task.status = v! ? 1 : 0;
+            task.progress = v ? 100 : 0;
+            await controller.updateTask(task);
+            loadUserDataAndTasks();
+          },
+        ),
+        title: Text(task.title, style: TextStyle(decoration: isDone ? TextDecoration.lineThrough : null)),
+        subtitle: Text(task.description),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 8, height: 90, color: isDone ? Colors.grey : getPriorityColor(task.priority)),
-            
-            Expanded(
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 15, vertical: 5),
-                leading: Transform.scale(
-                  scale: 1.2,
-                  child: Checkbox(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                    activeColor: const Color(0xFF6C63FF),
-                    value: isDone,
-                    onChanged: (v) async {
-                      task.status = v! ? 1 : 0;
-                      task.progress = v ? 100 : task.progress;
-                      await controller.updateTask(task);
-                      loadUserDataAndTasks();
-                    },
-                  ),
-                ),
-                title: Text(
-                  task.title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    decoration: isDone ? TextDecoration.lineThrough : null,
-                    color: isDone ? Colors.grey : Colors.black87,
-                  ),
-                ),
-                subtitle: Text(
-                  task.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Colors.grey.shade600),
-                ),
-                
-                // AJOUT : Row pour inclure les boutons Modifier ET Supprimer
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Bouton Modifier
-                    IconButton(
-                      icon: const Icon(Icons.edit_note, color: Color(0xFF6C63FF), size: 28),
-                      onPressed: () async {
-                        bool? result = await Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => EditTaskPage(task: task)),
-                        );
-                        if (result == true) loadUserDataAndTasks();
-                      },
-                    ),
-                    // Bouton Supprimer (Corrigé)
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.redAccent, size: 24),
-                      onPressed: () async {
-                        await controller.deleteTask(task.id!);
-                        loadUserDataAndTasks();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            IconButton(icon: const Icon(Icons.edit_note), onPressed: () async {
+              bool? result = await Navigator.push(context, MaterialPageRoute(builder: (_) => EditTaskPage(task: task)));
+              if (result == true) loadUserDataAndTasks();
+            }),
+            IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), onPressed: () async {
+              await controller.deleteTask(task.id!);
+              loadUserDataAndTasks();
+            }),
           ],
         ),
       ),
